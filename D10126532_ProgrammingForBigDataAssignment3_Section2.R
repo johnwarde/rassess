@@ -29,6 +29,19 @@
 # * If your solution is parallelised: extra 20 points
 # * If your solution uses out-of-memory data: extra 20 points
 
+# TODO: comment out/delete next line before submission
+setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
+
+# Read in the main data file as a data frame, cater for a header row and comma as separator
+stockData <- read.table("stocksNumeric.csv", header=T, sep=",")
+
+# Apply the stock codes to the numerical values, 
+#  if Stock Codes change or are added/delete then 
+#  the next line would need to be modified.
+stockData$stock <- factor(as.factor(stockData$stock), labels=c("AAPL","GOOG","ORCL","INTC","SYMC","FB","CSCO","XRX","IBM","MSFT"))
+
+
+
 
 
 
