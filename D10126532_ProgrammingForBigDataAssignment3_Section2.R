@@ -49,5 +49,9 @@ mean(stockData[stockData$stock=="MSFT", 5])
 attach(stockData)
 plot(stockData[stockData$stock=="MSFT", 5], type="l")
 
-
+stockNamesAsLevels <- levels(as.factor(stockData[,2]))
+lapply(stockNamesAsLevels, 
+       FUN=function(stock) {
+         mean(stockData[stockData[,2]==stock,5])
+       })
 
