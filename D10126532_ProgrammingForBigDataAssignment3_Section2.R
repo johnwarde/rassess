@@ -40,8 +40,14 @@ stockData <- read.table("stocksNumeric.csv", header=T, sep=",")
 #  the next line would need to be modified.
 stockData$stock <- factor(as.factor(stockData$stock), labels=c("AAPL","GOOG","ORCL","INTC","SYMC","FB","CSCO","XRX","IBM","MSFT"))
 
+# TODO: Testing here, remove redundant before submission
+stockData[stockData$stock=="MSFT", ]
+mean(stockData[stockData$stock=="MSFT", 5])
 
 
+# Attch data frame so that we can use the plotting functions easily
+attach(stockData)
+plot(stockData[stockData$stock=="MSFT", 5], type="l")
 
 
 
