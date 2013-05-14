@@ -52,16 +52,22 @@ stockData$stock <- factor(as.factor(stockData$stock),
 # higher than the overall average daily gain of the entire stock exchange in
 # that time.
 
+getMarketAverage <- function(lastNdays = 90) {
+  mean(stockData[stockData$day==1:lastNdays,5])
+}
+getMarketAverage()
 
-getAverages <- function() {
- stockNamesAsLevels <- levels(as.factor(stockData[,2]))
+getAveragesPerStock <- function(lastNdays = 90) {
+ stockNamesAsLevels <- levels(as.factor(stockData$stock))
  lapply(stockNamesAsLevels, 
-                    FUN=function(stock) {
-                      mean(stockData[stockData[,2]==stock,5])
+                    FUN=function(thisStock) {
+                      dfForStock <- stockData[stockData$stock==thisStock,]
+                      mean(dfForStock[dfForStock$day==1:lastNdays, 5])
                     })
 }
+getAveragesPerStock()
 
-results <- getAverages()
+
 
 
 
