@@ -46,27 +46,37 @@ stockData$stock <- factor(as.factor(stockData$stock),
 #stockData[stockData$stock=="MSFT", ]
 #mean(stockData[stockData$stock=="MSFT", 5])
 
-
-
+# THE TASK
 # Identify stocks whose daily average gain, in a certain time period, is 
 # higher than the overall average daily gain of the entire stock exchange in
 # that time.
 
+# Get the average gain for all stocks in supplied data 
+# for day for 1 to lastNdays
 getMarketAverage <- function(thisStockData, lastNdays = 90) {
+  # Filter the gain data (column 5) that has a day number in the range of
+  # 1 to lastNdays and get the average
   mean(thisStockData[thisStockData$day==1:lastNdays,5])
 }
-getMarketAverage(stockData)
 
-getAveragesPerStock <- function(lastNdays = 90) {
- stockNamesAsLevels <- levels(as.factor(stockData$stock))
- lapply(stockNamesAsLevels, 
-                FUN=function(thisStock, endRange=lastNdays) {
-                  dfForStock <- stockData[stockData$stock==thisStock,]
-                  mean(dfForStock[dfForStock$day==1:endRange, 5])
-                })
+# Return the average for each stock contained in the stock data for the last
+# 1 to N days
+getAveragesPerStock <- function(dfStock, lastNdays = 90) {
+  # Determine the stock codes from supplied data
+  stockNamesAsLevels <- levels(as.factor(dfStock$stock))
+  # Iterate over the different stocks to get the different averages
+  lapply(stockNamesAsLevels, 
+          FUN=function(thisStock, dfStockForLoop=dfStock,endRange=lastNdays) {
+            # First filter the data for the current stock code
+            dfForStock <- dfStockForLoop[dfStockForLoop$stock==thisStock,]
+            # Then get the average for the specified day range
+            mean(dfForStock[dfForStock$day==1:endRange, 5])
+          })
 }
-getAveragesPerStock(1)
 
+mrktAvg <- getMarketAverage(stockData)
+
+avgByStock <- getAveragesPerStock(stockData)
 
 
 
