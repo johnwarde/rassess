@@ -1,3 +1,6 @@
+# Set-up ------------------------------------------------------------------
+
+
 #########################################
 #
 # Student ID:   D10126532
@@ -34,7 +37,6 @@ setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
 
 
 # Non Parallel Solution ---------------------------------------------------
-
 
 # Load the required libraries
 library(foreach)
@@ -83,18 +85,28 @@ getAveragesPerStock <- function(dfStock, lastNdays = 90) {
           })
 }
 
-mrktAvg <- getMarketAverage(stockData)
-
-avgByStock <- getAveragesPerStock(stockData)
-
-results <- foreach (i=1:length(avgByStock)) %do% {
-  if (avgByStock[i] > mrktAvg) {
-    allStockCodes[i]
+# Determine the performing stocks by calculating which stocks out perform the
+# average of the entire stock portfolio data over the last N days
+performingStocks <- function(stockData, lastNDays = 90) {
+  # Get the average for all stocks
+  mrktAvg <- getMarketAverage(stockData, lastNDays)
+  # Get averages of all stock codes
+  avgByStock <- getAveragesPerStock(stockData, lastNDays)
+  # Loop through to see which stock are performing better than the average
+  results <- foreach (i=1:length(avgByStock)) %do% {
+    if (avgByStock[i] > mrktAvg) {
+      allStockCodes[i]
+    }
   }
+  # Filter out the NULLs (under performing stocks from the list to leave 
+  # only the performing stocks codes
+  results[results!='NULL']
 }
 
-performingStocks <- results[results!='NULL']
-performingStocks
+# Inform the user
+cat("The peforming stocks are: \n", paste(performingStocks(stockData, 30)),"\n")
+
+
 
 # Parallel Solution ------------------------------------------------------
 
