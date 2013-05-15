@@ -32,15 +32,24 @@
 # TODO: comment out/delete next line before submission
 setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
 
+
+# Non Parallel Solution ---------------------------------------------------
+
+
+# Load the required libraries
+library(foreach)
+
 # Read in the main data file as a data frame, cater for a header row and comma 
 # as separator
 stockData <- read.table("stocksNumeric.csv", header=T, sep=",")
 
+allStockCodes <- 
+  c("AAPL","GOOG","ORCL","INTC","SYMC","FB","CSCO","XRX","IBM","MSFT")
+
 # Apply the stock codes to the numerical values, 
 #  if Stock Codes change or are added/delete then 
 #  the next line would need to be modified.
-stockData$stock <- factor(as.factor(stockData$stock), 
-    labels=c("AAPL","GOOG","ORCL","INTC","SYMC","FB","CSCO","XRX","IBM","MSFT"))
+stockData$stock <- factor(as.factor(stockData$stock), labels=allStockCodes)
 
 # TODO: Testing here, remove redundant before submission
 #stockData[stockData$stock=="MSFT", ]
@@ -78,6 +87,16 @@ mrktAvg <- getMarketAverage(stockData)
 
 avgByStock <- getAveragesPerStock(stockData)
 
+results <- foreach (i=1:length(avgByStock)) %do% {
+  if (avgByStock[i] > mrktAvg) {
+    allStockCodes[i]
+  }
+}
+
+performingStocks <- results[results!='NULL']
+performingStocks
+
+# Parallel Solution ------------------------------------------------------
 
 
 
