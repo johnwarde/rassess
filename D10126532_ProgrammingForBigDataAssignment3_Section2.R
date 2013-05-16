@@ -1,7 +1,4 @@
-# Set-up ------------------------------------------------------------------
-
-
-#########################################
+# Identificaiton ########################
 #
 # Student ID:   D10126532
 # Student Name: John Warde
@@ -12,8 +9,12 @@
 # Section 2 Stock Performance
 # 
 #########################################
+# Set-up ------------------------------------------------------------------
 
-# TODO: 
+
+
+
+# TODO: REMOVE NOTES BEFORE SUBMISSION
 
 # Notes from PDF:
 # * Your solution should contain a textual description (ca. 1 page pdf) of your 
@@ -35,11 +36,14 @@
 # TODO: comment out/delete next line before submission
 setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
 
+# Load the required libraries
+library(foreach)
+
 
 # Non Parallel Solution ---------------------------------------------------
 
-# Load the required libraries
-library(foreach)
+cat("Using Non-parallel solution ... \n")
+
 
 # Read in the main data file as a data frame, cater for a header row and comma 
 # as separator
@@ -52,15 +56,6 @@ allStockCodes <-
 #  if Stock Codes change or are added/delete then 
 #  the next line would need to be modified.
 stockData$stock <- factor(as.factor(stockData$stock), labels=allStockCodes)
-
-# TODO: Testing here, remove redundant before submission
-#stockData[stockData$stock=="MSFT", ]
-#mean(stockData[stockData$stock=="MSFT", 5])
-
-# THE TASK
-# Identify stocks whose daily average gain, in a certain time period, is 
-# higher than the overall average daily gain of the entire stock exchange in
-# that time.
 
 # Get the average gain for all stocks in supplied data 
 # for day for 1 to lastNdays
@@ -110,5 +105,57 @@ cat("The peforming stocks are: \n", paste(performingStocks(stockData, 30)),"\n")
 
 # Parallel Solution ------------------------------------------------------
 
+cat("Using Parallel solution ... \n")
 
+# Load the Simple Network of Worstations library for parallelisation 
+library(doSNOW)
+
+# Make a cluster with one less than the number of logical processors on this
+# machine to prevent lockups
+clu <- makeCluster(3)
+# Register the new cluster
+registerDoSNOW(clu)
+
+# Get the average gain for all stocks in supplied data 
+# for day for 1 to lastNdays
+# getMarketAverage <- function(thisStockData, lastNdays = 90) {
+#   # Filter the gain data (column 5) that has a day number in the range of
+#   # 1 to lastNdays and get the average
+#   mean(thisStockData[thisStockData$day==1:lastNdays,5])
+# }
+
+# Return the average for each stock contained in the stock data for the last
+# 1 to N days
+getAveragesPerStock <- function(dfStock, lastNdays = 90) {
+  # Determine the stock codes from supplied data
+  stockNamesAsLevels <- levels(as.factor(dfStock$stock))
+  # Iterate over the different stocks to get the different averages
+  foreach (i=1:length(stockNamesAsLevels)) %dopar% {
+      # First filter the data for the current stock code
+      dfForStock <- dfStock[dfStock$stock==stockNamesAsLevels[i],]
+      # Then get the average for the specified day range
+      mean(dfForStock[dfForStock$day==1:lastNdays, 5])
+  }
+}
+
+# Determine the performing stocks by calculating which stocks out perform the
+# average of the entire stock portfolio data over the last N days
+performingStocks <- function(stockData, lastNDays = 90) {
+  # Get the average for all stocks
+  mrktAvg <- getMarketAverage(stockData, lastNDays)
+  # Get averages of all stock codes
+  avgByStock <- getAveragesPerStock(stockData, lastNDays)
+  # Loop through to see which stock are performing better than the average
+  results <- foreach (i=1:length(avgByStock)) %do% {
+    if (avgByStock[i] > mrktAvg) {
+      allStockCodes[i]
+    }
+  }
+  # Filter out the NULLs (under performing stocks) from the list to leave 
+  # only the performing stocks codes
+  results[results!='NULL']
+}
+
+# Inform the user
+cat("The peforming stocks are: \n", paste(performingStocks(stockData, 30)),"\n")
 
