@@ -82,7 +82,7 @@ getAveragesPerStock <- function(dfStock, lastNdays = 90) {
 
 # Determine the performing stocks by calculating which stocks out perform the
 # average of the entire stock portfolio data over the last N days
-performingStocks <- function(stockData, lastNDays = 90) {
+performingStocks <- function(stockData, allStockCodes, lastNDays = 90) {
   # Get the average for all stocks
   mrktAvg <- getMarketAverage(stockData, lastNDays)
   # Get averages of all stock codes
@@ -99,7 +99,8 @@ performingStocks <- function(stockData, lastNDays = 90) {
 }
 
 # Inform the user
-cat("The peforming stocks are: \n", paste(performingStocks(stockData, 30)),"\n")
+cat("The peforming stocks are: \n", paste(
+  performingStocks(stockData, allStockCodes, 30)),"\n")
 
 
 
@@ -108,11 +109,14 @@ cat("The peforming stocks are: \n", paste(performingStocks(stockData, 30)),"\n")
 cat("Using Parallel solution ... \n")
 
 # Load the Simple Network of Worstations library for parallelisation 
-library(doSNOW)
-
+library(parallel)
 # Make a cluster with one less than the number of logical processors on this
 # machine to prevent lockups
-clu <- makeCluster(3)
+clu <- makeCluster(detectCores() - 1)
+
+# Load the Simple Network of Worstations library for parallelisation 
+library(doSNOW)
+
 # Register the new cluster
 registerDoSNOW(clu)
 
@@ -140,13 +144,13 @@ getAveragesPerStock <- function(dfStock, lastNdays = 90) {
 
 # Determine the performing stocks by calculating which stocks out perform the
 # average of the entire stock portfolio data over the last N days
-performingStocks <- function(stockData, lastNDays = 90) {
+performingStocks <- function(stockData, allStockCodes, lastNDays = 90) {
   # Get the average for all stocks
   mrktAvg <- getMarketAverage(stockData, lastNDays)
   # Get averages of all stock codes
   avgByStock <- getAveragesPerStock(stockData, lastNDays)
   # Loop through to see which stock are performing better than the average
-  results <- foreach (i=1:length(avgByStock)) %do% {
+  results <- foreach (i=1:length(avgByStock)) %dopar% {
     if (avgByStock[i] > mrktAvg) {
       allStockCodes[i]
     }
@@ -157,5 +161,12 @@ performingStocks <- function(stockData, lastNDays = 90) {
 }
 
 # Inform the user
-cat("The peforming stocks are: \n", paste(performingStocks(stockData, 30)),"\n")
+cat("The peforming stocks are: \n", paste(
+  performingStocks(stockData, allStockCodes, 30)),"\n")
+
+# Release the cluster resources
+stopCluster(clu)
+
+
+
 
