@@ -167,6 +167,96 @@ cat("The peforming stocks are: \n", paste(
 # Release the cluster resources
 stopCluster(clu)
 
+# Unload the doSNOW library
+detach("package:doSNOW", unload=TRUE)
+
+# Out-of-Memory Solution ------------------------------------------------------
+
+
+cat("Using Out-of-Memory solution (SQLite) ... \n")
+
+library(RSQLite)
+
+StockDbName <- "stocks.sqlite"
+
+#dbCon <- dbConnect("SQLite", dbname=StockDbName)
+
+# dbResults <- dbSendQuery(dbCon,
+#                    "SELECT gain FROM stock_gains")
+
+# sapply(dbRows, mean)
+# gain = -0.0002525648 
+
+#dbRows <- fetch(dbResults, n=999)
+#fetch(dbResults, n=10)
+
+
+# Get the average gain for all stocks in supplied data 
+# for day for 1 to lastNdays
+getMarketAverage <- function(StockDbName, lastNdays = 90) {
+  # Filter the gain data (column 5) that has a day number in the range of
+  # 1 to lastNdays and get the average
+  dbCon <- dbConnect("SQLite", dbname=StockDbName)
+  
+  dbResult <- dbGetQuery(dbCon, "SELECT COUNT(gain) FROM stock_gains")
+  totalRows <- dbResult[1,1]
+  # No need to dbClearResult(result) ...
+  # dbGetQuery combine dbSendQuery, fetch and dbClearResult as per documentation
+  
+  SQL <- sprintf("SELECT gain FROM stock_gains WHERE day <= %d", lastNdays)
+  cat(SQL)
+  dbResults <- dbSendQuery(dbCon, SQL)
+  dbRows <- fetch(dbResults, n=totalRows)
+  result <- sapply(dbRows, mean)
+  dbClearResult(dbResults)
+  dbDisconnect(dbCon)
+  result
+}
+getMarketAverage(StockDbName)
+
+
+# Return the average for each stock contained in the stock data for the last
+# 1 to N days
+getAveragesPerStock <- function(dfStock, lastNdays = 90) {
+  # Determine the stock codes from supplied data
+  stockNamesAsLevels <- levels(as.factor(dfStock$stock))
+  # Iterate over the different stocks to get the different averages
+  lapply(stockNamesAsLevels, 
+         FUN=function(thisStock, dfStockForLoop=dfStock,endRange=lastNdays) {
+           # First filter the data for the current stock code
+           dfForStock <- dfStockForLoop[dfStockForLoop$stock==thisStock,]
+           # Then get the average for the specified day range
+           mean(dfForStock[dfForStock$day==1:endRange, 5])
+         })
+}
+
+# Determine the performing stocks by calculating which stocks out perform the
+# average of the entire stock portfolio data over the last N days
+performingStocks <- function(stockData, allStockCodes, lastNDays = 90) {
+  # Get the average for all stocks
+  mrktAvg <- getMarketAverage(stockData, lastNDays)
+  # Get averages of all stock codes
+  avgByStock <- getAveragesPerStock(stockData, lastNDays)
+  # Loop through to see which stock are performing better than the average
+  results <- foreach (i=1:length(avgByStock)) %do% {
+    if (avgByStock[i] > mrktAvg) {
+      allStockCodes[i]
+    }
+  }
+  # Filter out the NULLs (under performing stocks from the list to leave 
+  # only the performing stocks codes
+  results[results!='NULL']
+}
+
+# Inform the user
+cat("The peforming stocks are: \n", paste(
+  performingStocks(stockData, allStockCodes, 30)),"\n")
 
 
 
+
+
+
+dbDisconnect(dbCon)
+
+detach("package:RSQLite", unload=TRUE)
