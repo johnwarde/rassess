@@ -12,27 +12,6 @@
 # Set-up ------------------------------------------------------------------
 
 
-
-
-# TODO: REMOVE NOTES BEFORE SUBMISSION
-
-# Notes from PDF:
-# * Your solution should contain a textual description (ca. 1 page pdf) of your 
-#   approach to the problem, including any assumptions you make.
-# * Your code must be runnable, in other words it should be possible to source 
-#   your script in a brand new R session with the data set in the working 
-#   directory. If you use any R libraries (you may or may not), add a comment 
-#   stating which functions you are using from that library.
-# * You will get more marks if your code is readable, well-indented, and above 
-#   all well-commented.
-# * You will get more marks for appropriate use of the built-in functions of R 
-#   and its libraries.
-# Marks
-# * Correctly solve the problem for the 90 day data: up to 20 points
-# * Be able to limit the analysis to a certain number of days: 5 points
-# * If your solution is parallelised: extra 20 points
-# * If your solution uses out-of-memory data: extra 20 points
-
 # TODO: comment out/delete next line before submission
 setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
 
@@ -173,6 +152,12 @@ detach("package:doSNOW", unload=TRUE)
 # Out-of-Memory Solution ------------------------------------------------------
 
 
+require(foreach)
+require(doSNOW)
+clu <- makeCluster(detectCores() - 1)
+registerDoSNOW(clu)
+
+
 cat("Using Out-of-Memory solution (SQLite) ... \n")
 
 library(RSQLite)
@@ -230,15 +215,13 @@ getPerformingStocks <- function(StockDbName, mrktAvg, lastNdays = 90) {
   dbResult <- dbGetQuery(dbCon, "SELECT DISTINCT stock FROM stock_gains")
   stockNames <- simplify2array(dbResult)
   dbDisconnect(dbCon)  
-  
-  foreach (i=1:length(stockNames)) %dopar% {
-    cat("StockDbName", StockDbName)
+  cat("foreach dopar\n")
+  allResults <-foreach (i=1:length(stockNames)) %dopar% {
+    library(RSQLite)
     dbCon <- dbConnect("SQLite", dbname=StockDbName)
-    dbListConnections()
     SQL <- sprintf(
       "SELECT gain FROM stock_gains WHERE stock = '%s' AND day <= %d ORDER BY day", 
       stockNames[i], lastNdays)
-    cat(SQL)  
     dbResults <- dbSendQuery(dbCon, SQL)
     dbRows <- fetch(dbResults, n=dbGetRowCount(dbResults))
     result <- sapply(dbRows, mean)
@@ -247,15 +230,22 @@ getPerformingStocks <- function(StockDbName, mrktAvg, lastNdays = 90) {
     if (result > mrktAvg) {
       stockNames[i]    
     }
-  }  
+  }
+  allResults[allResults!='NULL']
 }
 
+lastNDays <- 30
 # Inform the user
 cat("The peforming stocks are: \n", paste(
   getPerformingStocks(StockDbName, 
-                      getMarketAverage(StockDbName, lastNDays), 30)),"\n")
+                      getMarketAverage(StockDbName, lastNDays), lastNDays)),"\n")
 
 
-dbDisconnect(dbCon)
+stopCluster(clu)
 
+# Clean up, unload non-core libraries
 detach("package:RSQLite", unload=TRUE)
+detach("package:foreach", unload=TRUE)
+detach("package:doSNOW", unload=TRUE)
+
+
