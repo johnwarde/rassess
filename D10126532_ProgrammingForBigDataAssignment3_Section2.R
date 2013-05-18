@@ -16,7 +16,7 @@
 setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
 
 # Load the required libraries
-library(foreach)
+library(foreach, quietly = TRUE)
 
 
 # Non Parallel Solution ---------------------------------------------------
@@ -87,25 +87,17 @@ cat("The peforming stocks are: \n", paste(
 
 cat("Using Parallel solution ... \n")
 
+# Load the parallel library 
+library(parallel, quietly = TRUE)
 # Load the Simple Network of Worstations library for parallelisation 
-library(parallel)
+library(doSNOW, quietly = TRUE)
+
 # Make a cluster with one less than the number of logical processors on this
 # machine to prevent lockups
 clu <- makeCluster(detectCores() - 1)
 
-# Load the Simple Network of Worstations library for parallelisation 
-library(doSNOW)
-
 # Register the new cluster
 registerDoSNOW(clu)
-
-# Get the average gain for all stocks in supplied data 
-# for day for 1 to lastNdays
-# getMarketAverage <- function(thisStockData, lastNdays = 90) {
-#   # Filter the gain data (column 5) that has a day number in the range of
-#   # 1 to lastNdays and get the average
-#   mean(thisStockData[thisStockData$day==1:lastNdays,5])
-# }
 
 # Return the average for each stock contained in the stock data for the last
 # 1 to N days
@@ -146,35 +138,18 @@ cat("The peforming stocks are: \n", paste(
 # Release the cluster resources
 stopCluster(clu)
 
-# Unload the doSNOW library
-detach("package:doSNOW", unload=TRUE)
 
 # Out-of-Memory Solution ------------------------------------------------------
 
-
-require(foreach)
-require(doSNOW)
+# TODO: resuse cluster above?
 clu <- makeCluster(detectCores() - 1)
 registerDoSNOW(clu)
 
-
 cat("Using Out-of-Memory solution (SQLite) ... \n")
 
-library(RSQLite)
+library(RSQLite, quietly = TRUE)
 
 StockDbName <- "stocks.sqlite"
-
-#dbCon <- dbConnect("SQLite", dbname=StockDbName)
-
-# dbResults <- dbSendQuery(dbCon,
-#                    "SELECT gain FROM stock_gains")
-
-# sapply(dbRows, mean)
-# gain = -0.0002525648 
-
-#dbRows <- fetch(dbResults, n=999)
-#fetch(dbResults, n=10)
-
 
 # Get the average gain for all stocks in supplied data 
 # for day for 1 to lastNdays
@@ -185,16 +160,13 @@ getMarketAverage <- function(StockDbName, lastNdays = 90) {
   # How many observations are we working with?
   dbResult <- dbGetQuery(dbCon, "SELECT COUNT(gain) FROM stock_gains")
   totalRows <- dbResult[1,1]
-  # No need to dbClearResult(result) ...
-  # dbGetQuery combine dbSendQuery, fetch and dbClearResult as per documentation
   
-  # Filter the gain data (column 5) that has a day number in the range of
-  # 1 to lastNdays and get the average, using ORDER BY clause in in the SQL
+  # Filter the gain data that has a day number in the range of
+  # 1 to lastNdays and get the average, using ORDER BY clause in the SQL
   # statment in the hope that the database won't need to scan the entire
   # table when the lastNdays is less than the default
   SQL <- sprintf("SELECT gain FROM stock_gains WHERE day <= %d ORDER BY day", 
                  lastNdays)
-  cat(SQL)
   dbResults <- dbSendQuery(dbCon, SQL)
   dbRows <- fetch(dbResults, n=totalRows)
   result <- sapply(dbRows, mean)
@@ -207,17 +179,16 @@ getMarketAverage <- function(StockDbName, lastNdays = 90) {
 
 # Return the average for each stock contained in the stock data for the last
 # 1 to N days
-getPerformingStocks <- function(StockDbName, mrktAvg, lastNdays = 90) {
-  
+getPerformingStocks <- function(StockDbName, mrktAvg, lastNdays = 90) {  
   # Connect to the database
   dbCon <- dbConnect("SQLite", dbname=StockDbName)
   
   dbResult <- dbGetQuery(dbCon, "SELECT DISTINCT stock FROM stock_gains")
   stockNames <- simplify2array(dbResult)
   dbDisconnect(dbCon)  
-  cat("foreach dopar\n")
   allResults <-foreach (i=1:length(stockNames)) %dopar% {
-    library(RSQLite)
+    # We need to load the libray here becuase it is in a different process
+    library(RSQLite, quietly = TRUE)
     dbCon <- dbConnect("SQLite", dbname=StockDbName)
     SQL <- sprintf(
       "SELECT gain FROM stock_gains WHERE stock = '%s' AND day <= %d ORDER BY day", 
@@ -242,10 +213,3 @@ cat("The peforming stocks are: \n", paste(
 
 
 stopCluster(clu)
-
-# Clean up, unload non-core libraries
-detach("package:RSQLite", unload=TRUE)
-detach("package:foreach", unload=TRUE)
-detach("package:doSNOW", unload=TRUE)
-
-
