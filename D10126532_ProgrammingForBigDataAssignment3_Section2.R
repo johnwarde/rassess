@@ -12,9 +12,6 @@
 # Set-up ------------------------------------------------------------------
 
 
-# TODO: comment out/delete next line before submission
-setwd("C:/JB/Home/Docs/JobHunt/Courses/MSc/Programming for Big Data/R/rassess")
-
 # Load the required libraries
 library(foreach, quietly = TRUE)
 
@@ -141,7 +138,7 @@ stopCluster(clu)
 
 # Out-of-Memory Solution ------------------------------------------------------
 
-# TODO: resuse cluster above?
+# Create a new cluster and register it
 clu <- makeCluster(detectCores() - 1)
 registerDoSNOW(clu)
 
